@@ -66,6 +66,7 @@ class Order(models.Model):
     time_out = models.DateTimeField(null=True)
     cost = models.FloatField(default = 0.0)
     pickup = models.BooleanField(default = False)
+    complete = models.BooleanField(default = False)
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
     products = models.ManyToManyField(Product, through = 'ProductOrder')
 
@@ -76,9 +77,9 @@ class Order(models.Model):
 
     def get_duration(self):
         if self.complete:  # если завершён, возвращаем разность объектов
-            return (self.time_out - self.time_in).total_seconds() // 60
+            return (self.time_out - self.time_in).total_seconds()
         else:  # если ещё нет, то сколько длится выполнение
-            return (datetime.now(timezone.utc) - self.time_in).total_seconds() // 60
+            return (datetime.now() - self.time_in).total_seconds()
 
 # CREATE TABLE PRODUCTS_ORDERS(
 #     product_order_id INT AUTO_INCREMENT NOT NULL,
@@ -91,12 +92,22 @@ class Order(models.Model):
 # );
 
 class ProductOrder(models.Model):
-    amount = models.IntegerField(default=1)
+
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     in_order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    _amount = models.IntegerField(default=1, db_column='amount')
 
     def product_sum(self):
         product_price = self.product.price
         return product_price * self.amount
+
+    @property
+    def amount(self):
+        return self._amount
+
+    @amount.setter
+    def amount(self, value):
+        self._amount = int(value) if value > 0 else 0
+        self.save()
 
 
